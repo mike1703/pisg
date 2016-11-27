@@ -60,6 +60,7 @@ sub new
     $self->{ignorewords_regexp} = qr/$self->{cfg}->{ignorewords}/i if $self->{cfg}->{ignorewords};
     $self->{violentwords_regexp} = qr/^($self->{cfg}->{violentwords}) (\S+)(.*)/i if $self->{cfg}->{violentwords};
     $self->{chartsregexp} = qr/^$self->{cfg}->{chartsregexp}/i if $self->{cfg}->{chartsregexp};
+    $self->{fishregexp} = 'wirft (\S+) ein(\S*) (\S+) zu.*'
 
     return $self;
 }
@@ -513,6 +514,17 @@ sub _parse_file
 
                 if ($saying =~ /$self->{chartsregexp}/i) {
                     $self->_charts($stats, $1, $nick);
+                }
+
+                if ($saying =~ /$self->{fishregexp}/i) {
+                    my $slapped;
+                    my $object;
+                    $slapped = find_alias($hashref->{$1});
+                    $stats->{slapped}{$slapped}{$nick}++;
+                    $stats->{slapper}{$nick}++;
+
+                    $object = $2;
+                    $stats->{fishobject}{$object}++;
                 }
 
                 $stats->{lengths}{$nick} += length($saying);

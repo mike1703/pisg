@@ -159,6 +159,10 @@ sub create_output
         $self->_karma();
     }
 
+    if ($self->{cfg}->{showslapped}) {
+        $self->_slapped();
+    }
+
     if ($self->{cfg}->{showmru}) {
         $self->_mosturls();
     }
@@ -2004,6 +2008,58 @@ sub _karma
         _html("<td class=\"hicell\">$n</td>");
         _html("</tr>");
     }
+    _html("</table>");
+}
+sub _slapped
+{
+    # List showing the most slapped nicks
+    my $self = shift;
+
+    my %slapped;
+
+    foreach my $thing (sort keys %{ $self->{stats}->{slapped} }) {
+        my $Thing = lc(is_nick($thing) || $thing); # FIXME: this is ugly
+        foreach my $nick (keys %{ $self->{stats}->{slapped}{$thing} }) {
+            $slapped{$Thing} += $self->{stats}->{slapped}{$thing}{$nick};
+        }
+    }
+
+    my @popular = sort { $slapped{$b} <=> $slapped{$a} } keys %slapped;
+    return unless @popular;
+
+    $self->_headline($self->_template_text('slappedtopic'));
+
+    _html("<table border=\"0\" width=\"$self->{cfg}->{tablewidth}\"><tr>");
+    _html("<td>&nbsp;</td><td class=\"tdtop\"><b>" . $self->_template_text('nick') . "</b></td>");
+    _html("<td class=\"tdtop\"><b>" . $self->_template_text('slapped') . "</b></td>");
+    _html("<td class=\"tdtop\"><b>" . $self->_template_text('slappedby') . "</b></td>");
+
+    my @goodpos = grep { $slapped{$_} > 0 } @popular;
+    splice @goodpos, $self->{cfg}->{slappedhistory}, @goodpos
+        if @goodpos > $self->{cfg}->{slappedhistory};
+
+    my $pos = 0;
+    foreach my $thing (@goodpos) {
+        my $class = ($pos++ == 0) ? 'hirankc' : 'rankc';
+        my $Thing = $self->_format_word(is_nick($thing) || $thing); # ugliness #2
+        _html("<tr><td class=\"$class\">$pos</td>");
+        _html("<td class=\"hicell\">$Thing</td>");
+        _html("<td class=\"hicell\">$slapped{$thing}</td>");
+
+        my @k = grep { $self->{stats}->{slapped}{$thing}{$_} > 0 }
+            (keys %{ $self->{stats}->{slapped}{$thing} });
+        @k = $self->_trimlist(@k);
+        my $n = join ', ', map { $self->_format_word($_) } @k;
+        _html("<td class=\"hicell\">$n</td>");
+
+        @k = grep { $self->{stats}->{slapped}{$thing}{$_} < 0 }
+            (keys %{ $self->{stats}->{slapped}{$thing} });
+        @k = $self->_trimlist(@k);
+        $n = join ', ', map { $self->_format_word($_) } @k;
+        _html("<td class=\"hicell\">$n</td>");
+        _html("</tr>");
+    }
+
     _html("</table>");
 }
 
